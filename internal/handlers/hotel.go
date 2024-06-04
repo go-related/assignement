@@ -19,7 +19,7 @@ func (h *Handler) GetHotels(c *gin.Context) {
 	)
 	checkinTimeParameterValue, err := getQueryParamDate(c, "checkin")
 	if err == nil {
-		checkoutTime = &checkinTimeParameterValue
+		checkinTime = &checkinTimeParameterValue
 	}
 
 	checkoutTimeParameterValue, err := getQueryParamDate(c, "checkout")

@@ -1,22 +1,22 @@
 package models
 
-type HotelRequestRoomGuests struct {
-	AdultCount int `json:"adultCount"`
-	ChildCount int `json:"childCount"`
+type StayDTO struct {
+	CheckIn  string `json:"checkIn"`
+	CheckOut string `json:"checkOut"`
+}
+
+type OccupancyDTO struct {
+	Rooms    int `json:"rooms"`
+	Adults   int `json:"adults"`
+	Children int `json:"children"`
+}
+
+type HotelDTOs struct {
+	Hotel []uint `json:"hotel"`
 }
 
 type HotelRequestDTO struct {
-	CheckInDate  string `json:"checkInDate"`
-	CheckOutDate string `json:"checkOutDate"`
-	HotelCodes   []int  `json:"hotelCodes"`
-	RoomGuests   struct {
-		RoomGuests []struct {
-			AdultCount int `json:"adultCount"`
-			ChildCount int `json:"childCount"`
-		} `json:"roomGuests"`
-	} `json:"roomGuests"`
-	GuestNationality string `json:"guestNationality"`
-	Currency         string `json:"currency"`
-	LanguageCode     string `json:"languageCode"`
-	Timeout          string `json:"timeout"`
+	Stay        StayDTO        `json:"stay"`
+	Occupancies []OccupancyDTO `json:"occupancies"`
+	Hotels      HotelDTOs      `json:"hotels"`
 }

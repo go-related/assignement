@@ -19,6 +19,7 @@ type Handler struct {
 	Engine  *gin.Engine
 }
 
+// TODO update this to match what we have on the postman
 type Response struct {
 	Data interface{} `json:"data"`
 	Err  string      `json:"error_message"`
@@ -38,6 +39,7 @@ func NewHandler(hotelService services.Hotel, router *gin.Engine) *Handler {
 	return handler
 }
 
+// helpers
 func getQueryParamDate(c *gin.Context, paramName string) (time.Time, error) {
 	id := c.Query(paramName)
 	return utils.ConvertStringToDate(id)
@@ -81,7 +83,6 @@ func returnOk(c *gin.Context, status int, data interface{}) {
 	})
 }
 
-// TODO this
 func AbortWithMessage(c *gin.Context, status int, err error, message string) {
 	logrus.WithError(err).Error(message)
 

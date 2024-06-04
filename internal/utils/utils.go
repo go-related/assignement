@@ -24,7 +24,7 @@ func ConvertOptionalDateToString(dt *time.Time) string {
 
 func IsDateEmpty(dt *time.Time) bool {
 	var defaultTime time.Time
-	if dt == nil || dt.Equal(defaultTime) {
+	if dt == nil || (*dt).Equal(defaultTime) {
 		return true
 	}
 	return false
