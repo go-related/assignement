@@ -27,23 +27,31 @@ type Hotel interface {
 	CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) ([]models.HotelResponse, []byte, []byte, error)
 }
 
-type Service struct {
+type HotelService struct {
 	ApiKey    string
 	ApiSecret string
 	BaseURL   string
 }
 
-func NewService(apiKey, apiSecret, baseUrl string) (*Service, error) {
-	return &Service{apiKey, apiSecret, baseUrl}, nil
+func NewHotelService(apiKey, apiSecret, baseUrl string) (*HotelService, error) {
+	return &HotelService{apiKey, apiSecret, baseUrl}, nil
 }
 
-func (s *Service) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) ([]models.HotelResponse, []byte, []byte, error) {
+func (s *HotelService) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) ([]models.HotelResponse, []byte, []byte, error) {
 	var output []models.HotelResponse
 	// check the validation for simplicity we will make everything required
 	if utils.IsDateEmpty(checkinTime) || utils.IsDateEmpty(checkoutTime) {
 		return output, nil, nil, NewServiceError("invalid data for checkin-time or checkout-time")
 	}
-	// currency and guestNationality is not required on the
+
+	if checkinTime.Before(time.Now().UTC()) || checkoutTime.Before(time.Now().UTC()) {
+		return output, nil, nil, NewServiceError("invalid checkin/checkout time, should be in the future")
+	}
+	if checkinTime.After(*checkoutTime) {
+		return output, nil, nil, NewServiceError("invalid checkin-time should be in before checkout-time")
+	}
+
+	// currency and guestNationality is not required on the corresponding service, so we are ignoring them
 
 	if len(hotelIds) == 0 {
 		return output, nil, nil, NewServiceError("invalid hotel-ids")
@@ -82,7 +90,7 @@ func (s *Service) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency,
 	return output, requestBody, responseBody, nil
 }
 
-func (s *Service) CheckStatus() (bool, []byte, []byte, error) {
+func (s *HotelService) CheckStatus() (bool, []byte, []byte, error) {
 
 	// prepare the request
 	req, requestBody, err := s.prepareHttpRequest(http.MethodGet, statusUrl, nil)
@@ -104,7 +112,7 @@ func (s *Service) CheckStatus() (bool, []byte, []byte, error) {
 	return false, requestBody, body, nil
 }
 
-func (s *Service) prepareHttpRequest(method, targetUrl string, bodyData interface{}) (*http.Request, []byte, error) {
+func (s *HotelService) prepareHttpRequest(method, targetUrl string, bodyData interface{}) (*http.Request, []byte, error) {
 	var requestBody []byte
 	// calculate the signature
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
@@ -137,14 +145,19 @@ func (s *Service) prepareHttpRequest(method, targetUrl string, bodyData interfac
 	return req, requestBody, nil
 }
 
-func (s *Service) doHttpCall(req *http.Request) (int, []byte, error) {
+func (s *HotelService) doHttpCall(req *http.Request) (int, []byte, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		logrus.WithError(err).Error("failed to check hotel status")
 		return 0, nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logrus.WithError(err).Error("failed to close body")
+		}
+	}(resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

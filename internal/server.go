@@ -18,7 +18,7 @@ func NewServer(config *configurations.AssignmentConfigurations) (*Server, error)
 	//setup dependencies
 	router := gin.Default()
 
-	hotelService, err := services.NewService(config.ApiKey, config.ApiSecret, config.BaseUrl)
+	hotelService, err := services.NewHotelService(config.ApiKey, config.ApiSecret, config.BaseUrl)
 	if err != nil {
 		return nil, err
 	}
