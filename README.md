@@ -1,7 +1,7 @@
 # Gin proxy
 
 here i have created enough code to make it run and to show the road that i would follow if i had to solve this challenge.
-Normally i would have liked to have much more test coverage :) 
+Normally i would have liked to have much more test coverage(mock the service, the http call etc)  :) 
 
 the code can be found [here](https://github.com/go-related/assignement)
 
