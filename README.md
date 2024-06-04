@@ -16,7 +16,7 @@ Normally i would have liked to have much more test coverage :)
 
 - run the test
   ```
-   go test -v -race ./...
+   go test -v ./...
   ```
 - run
   ```
