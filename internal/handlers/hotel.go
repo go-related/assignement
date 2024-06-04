@@ -37,9 +37,10 @@ func (h *Handler) GetHotels(c *gin.Context) {
 		occupancies = occupanciesParameterValue
 	}
 
-	result, err := h.Service.CheckHotelRate(checkinTime, checkoutTime, currency, guestNationality, hotelIds, occupancies)
+	result, req, resp, err := h.Service.CheckHotelRate(checkinTime, checkoutTime, currency, guestNationality, hotelIds, occupancies)
 	if err != nil {
-		AbortWithMessage(c, http.StatusInternalServerError, err, "service can't connect to the hotel-api")
+		AbortWithMessage(c, http.StatusInternalServerError, err, "service can't connect to the hotel-api", req, resp)
+		return
 	}
-	returnOk(c, http.StatusOK, result)
+	returnOk(c, http.StatusOK, result, req, resp)
 }

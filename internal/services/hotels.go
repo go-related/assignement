@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"githumb/go-related/nuitteassignment/internal/models"
+	"githumb/go-related/nuitteassignment/internal/models/response"
 	"githumb/go-related/nuitteassignment/internal/utils"
 	"io"
 	"net/http"
@@ -22,8 +23,8 @@ const (
 )
 
 type Hotel interface {
-	CheckStatus() (bool, error)
-	CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) (bool, error)
+	CheckStatus() (bool, []byte, []byte, error)
+	CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) ([]models.HotelResponse, []byte, []byte, error)
 }
 
 type Service struct {
@@ -36,18 +37,19 @@ func NewService(apiKey, apiSecret, baseUrl string) (*Service, error) {
 	return &Service{apiKey, apiSecret, baseUrl}, nil
 }
 
-func (s *Service) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) (bool, error) {
+func (s *Service) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency, guestNationality string, hotelIds []uint, occupancies []models.Occupancies) ([]models.HotelResponse, []byte, []byte, error) {
+	var output []models.HotelResponse
 	// check the validation for simplicity we will make everything required
 	if utils.IsDateEmpty(checkinTime) || utils.IsDateEmpty(checkoutTime) {
-		return false, NewServiceError("invalid data for checkin-time or checkout-time")
+		return output, nil, nil, NewServiceError("invalid data for checkin-time or checkout-time")
 	}
 	// currency and guestNationality is not required on the
 
 	if len(hotelIds) == 0 {
-		return false, NewServiceError("invalid hotel-ids")
+		return output, nil, nil, NewServiceError("invalid hotel-ids")
 	}
 	if len(occupancies) == 0 {
-		return false, NewServiceError("invalid occupancies")
+		return output, nil, nil, NewServiceError("invalid occupancies")
 	}
 
 	requestData := models.HotelRequestDTO{
@@ -60,43 +62,58 @@ func (s *Service) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency,
 		},
 		Occupancies: convertOccupancies(occupancies),
 	}
-	req, err := s.prepareHttpRequest(http.MethodPost, hotelsUrl, requestData)
+	req, requestBody, err := s.prepareHttpRequest(http.MethodPost, hotelsUrl, requestData)
 	if err != nil {
-		return false, err
+		return output, requestBody, nil, err
 	}
-	status, responsebody, err := s.doHttpCall(req)
+	_, responseBody, err := s.doHttpCall(req)
 	if err != nil {
 		logrus.WithError(err).Error("failed to check hotel rates")
-		return false, err
+		return output, requestBody, responseBody, err
 	}
-	println(status)
-	println(string(responsebody))
-	return true, nil
+	var response response.HotelResponseDTO
+	err = json.Unmarshal(responseBody, &response)
+	if err != nil {
+		logrus.WithError(err).Error("failed to read hotel response")
+		return output, requestBody, responseBody, err
+	}
+	if response.Hotels != nil && response.Hotels.Hotels != nil {
+		for _, hotel := range *response.Hotels.Hotels {
+			output = append(output, models.HotelResponse{
+				HotelId:  hotel.Code,
+				Currency: hotel.Currency,
+				Price:    hotel.MinRate,
+			})
+		}
+	}
+
+	return output, requestBody, responseBody, nil
 }
 
-func (s *Service) CheckStatus() (bool, error) {
+func (s *Service) CheckStatus() (bool, []byte, []byte, error) {
 
 	// prepare the request
-	req, err := s.prepareHttpRequest(http.MethodGet, statusUrl, nil)
+	req, requestBody, err := s.prepareHttpRequest(http.MethodGet, statusUrl, nil)
 	if err != nil {
-		return false, err
+		return false, requestBody, nil, err
 	}
 
 	status, body, err := s.doHttpCall(req)
 	if err != nil {
 		logrus.WithError(err).Error("failed to check hotel status")
-		return false, err
+		return false, requestBody, body, err
 	}
 
 	// this is a simplified version of checking this
 	if status == 200 && strings.Contains(string(body), `"status":"OK"`) {
-		return true, nil
+		return true, requestBody, body, nil
 	}
 
-	return false, nil
+	return false, requestBody, body, nil
 }
 
-func (s *Service) prepareHttpRequest(method, targetUrl string, bodyData interface{}) (*http.Request, error) {
+func (s *Service) prepareHttpRequest(method, targetUrl string, bodyData interface{}) (*http.Request, []byte, error) {
+	var requestBody []byte
 	// calculate the signature
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	signatureString := s.ApiKey + s.ApiSecret + timestamp
@@ -110,18 +127,22 @@ func (s *Service) prepareHttpRequest(method, targetUrl string, bodyData interfac
 	if bodyData != nil {
 		jsonBody, err := json.Marshal(bodyData)
 		if err != nil {
-			return nil, err
+			return nil, requestBody, err
 		}
 		body = bytes.NewBuffer(jsonBody)
+		requestBody = jsonBody
 	}
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, err
+		return nil, requestBody, err
 	}
 	req.Header.Set("Accept", "application/json") // all these need to constants
 	req.Header.Set("Api-key", s.ApiKey)
 	req.Header.Set("X-Signature", signatureEncoded)
-	return req, nil
+	if bodyData != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return req, requestBody, nil
 }
 
 func (s *Service) doHttpCall(req *http.Request) (int, []byte, error) {

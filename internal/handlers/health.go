@@ -6,9 +6,10 @@ import (
 )
 
 func (h *Handler) GetHealth(c *gin.Context) {
-	status, err := h.Service.CheckStatus()
+	status, req, response, err := h.Service.CheckStatus()
 	if err != nil {
-		AbortWithMessage(c, http.StatusInternalServerError, err, "service can't connect to the hotel-api")
+		AbortWithMessage(c, http.StatusInternalServerError, err, "service can't connect to the hotel-api", req, response)
+		return
 	}
-	returnOk(c, http.StatusOK, status)
+	returnOk(c, http.StatusOK, status, req, response)
 }

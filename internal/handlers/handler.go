@@ -19,10 +19,14 @@ type Handler struct {
 	Engine  *gin.Engine
 }
 
-// TODO update this to match what we have on the postman
+type SupplierData struct {
+	Request  string `json:"request"`
+	Response string `json:"response"`
+}
 type Response struct {
-	Data interface{} `json:"data"`
-	Err  string      `json:"error_message"`
+	Data     interface{}  `json:"data"`
+	Err      string       `json:"error_message"`
+	Supplier SupplierData `json:"supplier"`
 }
 
 func NewHandler(hotelService services.Hotel, router *gin.Engine) *Handler {
@@ -77,13 +81,17 @@ func getQueryParamDataList[T any](c *gin.Context, paramName string) ([]T, error)
 	return nil, fmt.Errorf("qyery parameter not found")
 }
 
-func returnOk(c *gin.Context, status int, data interface{}) {
+func returnOk(c *gin.Context, status int, data interface{}, request, response []byte) {
 	c.IndentedJSON(status, Response{
 		Data: data,
+		Supplier: SupplierData{
+			Request:  string(request),
+			Response: string(response),
+		},
 	})
 }
 
-func AbortWithMessage(c *gin.Context, status int, err error, message string) {
+func AbortWithMessage(c *gin.Context, status int, err error, message string, request, response []byte) {
 	logrus.WithError(err).Error(message)
 
 	// custom validation error update status and message
@@ -94,5 +102,9 @@ func AbortWithMessage(c *gin.Context, status int, err error, message string) {
 	}
 	c.AbortWithStatusJSON(status, Response{
 		Err: errors.New(message).Error(),
+		Supplier: SupplierData{
+			Request:  string(request),
+			Response: string(response),
+		},
 	})
 }
