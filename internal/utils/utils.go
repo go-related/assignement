@@ -15,12 +15,6 @@ func ConvertDateToString(dt time.Time) string {
 	}
 	return dt.UTC().Format(time.DateOnly)
 }
-func ConvertOptionalDateToString(dt *time.Time) string {
-	if dt == nil {
-		return ""
-	}
-	return ConvertDateToString(*dt)
-}
 
 func IsDateEmpty(dt *time.Time) bool {
 	var defaultTime time.Time
@@ -28,11 +22,4 @@ func IsDateEmpty(dt *time.Time) bool {
 		return true
 	}
 	return false
-}
-
-func DoesUintHaveValue(val *uint) bool {
-	if val == nil || *val == 0 {
-		return false
-	}
-	return true
 }

@@ -71,22 +71,14 @@ func (s *Service) CheckHotelRate(checkinTime, checkoutTime *time.Time, currency,
 		logrus.WithError(err).Error("failed to check hotel rates")
 		return output, requestBody, responseBody, err
 	}
-	var response response.HotelResponseDTO
-	err = json.Unmarshal(responseBody, &response)
+	var responseDto response.HotelResponseDTO
+	err = json.Unmarshal(responseBody, &responseDto)
 	if err != nil {
 		logrus.WithError(err).Error("failed to read hotel response")
 		return output, requestBody, responseBody, err
 	}
-	if response.Hotels != nil && response.Hotels.Hotels != nil {
-		for _, hotel := range *response.Hotels.Hotels {
-			output = append(output, models.HotelResponse{
-				HotelId:  hotel.Code,
-				Currency: hotel.Currency,
-				Price:    hotel.MinRate,
-			})
-		}
-	}
 
+	output = convertHotelResponse(&responseDto)
 	return output, requestBody, responseBody, nil
 }
 

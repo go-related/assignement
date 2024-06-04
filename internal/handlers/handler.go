@@ -101,7 +101,7 @@ func AbortWithMessage(c *gin.Context, status int, err error, message string, req
 		message = err.Error()
 	}
 	c.AbortWithStatusJSON(status, Response{
-		Err: errors.New(message).Error(),
+		Err: errors.New(message).Error(), // so we don't send stack trace to the clients
 		Supplier: SupplierData{
 			Request:  string(request),
 			Response: string(response),
