@@ -1,0 +1,4 @@
+baseUrl: "https://api.test.hotelbeds.com/hotel-api/1.0"
+port: 8081
+apiKey: "db11033c50b5ed53ab7b815cb1b2eaee"
+apiSecret: "704773c0e3"
